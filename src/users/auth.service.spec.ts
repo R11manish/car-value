@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { uuid } from 'uuidv4';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -10,10 +11,17 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     // Create a fake copy of the users service
+    const users: User[] = [];
     fakeUsersService = {
-      find: () => Promise.resolve([]),
-      create: (email: string, password: string) =>
-        Promise.resolve({ id: '3432432', email, password } as User),
+      find: (email: string) => {
+        const filteredUsers = users.filter((user) => user.email === email);
+        return Promise.resolve(filteredUsers);
+      },
+      create: (email: string, password: string) => {
+        const user = { id: uuid(), email, password };
+        users.push(user);
+        return Promise.resolve(user);
+      },
     };
 
     const module = await Test.createTestingModule({
@@ -42,9 +50,14 @@ describe('AuthService', () => {
     expect(hash).toBeDefined();
   });
 
-  it('throws an error if user signup with email that is in use', async () => {
-    fakeUsersService.find = () =>
-      Promise.resolve([{ id: 'afdsfds', email: 'a', password: '1' }]);
+  it('throws if signin is called with an unused email', async () => {
+    await expect(service.signin('test@test.com', 'test')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws an error if user signs up with email that is in use', async () => {
+    await service.signup('asdf@asdf.com', 'asdf');
     await expect(service.signup('asdf@asdf.com', 'asdf')).rejects.toThrow(
       BadRequestException,
     );
@@ -52,7 +65,14 @@ describe('AuthService', () => {
 
   it('throws if signin is called with an unused email', async () => {
     await expect(
-      service.signin('test@test.com', 'test'),
+      service.signin('asdflkj@asdlfkj.com', 'passdflkj'),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws if an invalid password is provided', async () => {
+    await service.signup('testf@test.com', 'test');
+    await expect(service.signin('testf@test.com', 'example')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });
