@@ -10,9 +10,10 @@ export class UsersService {
     private readonly em: EntityManager,
   ) {}
 
-  create(email: string, password: string) {
+  async create(email: string, password: string) {
     const user = this.repo.create({ email, password });
-    return this.em.persistAndFlush(user);
+    await this.em.persistAndFlush(user);
+    return user;
   }
 
   findOne(id: string) {

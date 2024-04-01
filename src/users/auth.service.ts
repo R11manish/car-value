@@ -17,7 +17,7 @@ export class AuthService {
     const users = await this.userService.find(email);
 
     if (users.length) {
-      return new BadRequestException('user is not found');
+      throw new BadRequestException('user is not found');
     }
 
     const salt = randomBytes(8).toString('hex');
@@ -33,7 +33,7 @@ export class AuthService {
   async signin(email: string, password: string) {
     const [user] = await this.userService.find(email);
     if (!user) {
-      return new NotFoundException('user not found');
+      throw new NotFoundException('user not found');
     }
 
     const [salt, hash] = user.password.split('.');
